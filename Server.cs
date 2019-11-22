@@ -26,9 +26,10 @@ namespace DarkMUD_Server
         public static SessionRef[] Sessions = new SessionRef[1000];
         static void Main(string[] args)
         {
-            string ipAdress = "192.168.1.146";
-            int port = 52587;
-
+            string ipAdress = "0.0.0.0";
+            int port = 420;
+	
+		Console.WriteLine("Starting server...");
             TcpListener server = new TcpListener(IPAddress.Parse(ipAdress), port);
 
             server.Start();

@@ -53,7 +53,8 @@ namespace Session
                     case "shout":
                         foreach (DarkMUD_Server.SessionRef sRef in DarkMUD_Server.Server.Sessions.Where(x => x != null))
                         {
-                            await Send(sRef.client.GetStream(),string.Join(' ', command.Skip(1)));
+                            try {await Send(sRef.client.GetStream(),string.Join(' ', command.Skip(1)));}
+                            catch (Exception e) { Console.WriteLine("[{0}] " + e, id);}
                         }
                         break;
 

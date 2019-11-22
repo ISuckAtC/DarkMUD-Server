@@ -16,6 +16,8 @@ namespace Session
 
         int id;
 
+        string username = "";
+
         public async Task Session(TcpClient c, int _id)
         {
             id = _id;
@@ -28,7 +30,13 @@ namespace Session
 
             Console.WriteLine("[{0}] Aquired stream...", id);
 
-            await Send(stream, "Welcome!");
+            await Send(stream, "Welcome!\nPlease pick a username");
+            
+            while(username == "")
+            {
+                await Send(stream, "Please pick a username");
+                username = await GetResponse(stream);
+            }
 
             while (true)
             {
@@ -53,7 +61,7 @@ namespace Session
                     case "shout":
                         foreach (DarkMUD_Server.SessionRef sRef in DarkMUD_Server.Server.Sessions.Where(x => x != null))
                         {
-                            try {await Send(sRef.client.GetStream(),string.Join(' ', command.Skip(1)));}
+                            try {await Send(sRef.client.GetStream(), username + ": " + string.Join(' ', command.Skip(1)));}
                             catch (Exception e) { Console.WriteLine("[{0}] " + e, id);}
                         }
                         break;
@@ -93,7 +101,12 @@ namespace Session
             DarkMUD_Server.Server.Sessions[id] = null;
         }
 
-        async Task Send(NetworkStream s, string message) { await s.WriteAsync(Encoding.ASCII.GetBytes(message + "END")); }
+        async Task Send(NetworkStream s, string message) 
+        { 
+            //Console.WriteLine("Sending: " + message);
+            byte[] bytes = Encoding.ASCII.GetBytes(message + "END");
+            await s.WriteAsync(bytes, 0, bytes.Length); 
+        }
 
         async Task<string> GetResponse(NetworkStream s)
         {

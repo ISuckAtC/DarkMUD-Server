@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace DarkMUD_Server
 {
@@ -22,14 +23,16 @@ namespace DarkMUD_Server
     }
     class Server
     {
-        public static int MaxPlayers = 1000;
+        static string[] config = File.ReadAllLines("config.txt");
+
+        public static int MaxPlayers = int.Parse(config[2]);
         public static SessionRef[] Sessions = new SessionRef[1000];
         static void Main(string[] args)
         {
-            string ipAdress = "0.0.0.0";
-            int port = 420;
+            string ipAdress = config[0];
+            int port = int.Parse(config[1]);
 	
-		Console.WriteLine("Starting server...");
+		    Console.WriteLine("Starting server...");
             TcpListener server = new TcpListener(IPAddress.Parse(ipAdress), port);
 
             server.Start();

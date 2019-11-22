@@ -1,0 +1,11 @@
+D:\Programming\C#\DarkMUD-Server\obj\Debug\netcoreapp3.0\DarkMUD-Server.csprojAssemblyReference.cache
+D:\Programming\C#\DarkMUD-Server\obj\Debug\netcoreapp3.0\DarkMUD-Server.AssemblyInfoInputs.cache
+D:\Programming\C#\DarkMUD-Server\obj\Debug\netcoreapp3.0\DarkMUD-Server.AssemblyInfo.cs
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.exe
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.deps.json
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.runtimeconfig.json
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.runtimeconfig.dev.json
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.dll
+D:\Programming\C#\DarkMUD-Server\bin\Debug\netcoreapp3.0\DarkMUD-Server.pdb
+D:\Programming\C#\DarkMUD-Server\obj\Debug\netcoreapp3.0\DarkMUD-Server.dll
+D:\Programming\C#\DarkMUD-Server\obj\Debug\netcoreapp3.0\DarkMUD-Server.pdb

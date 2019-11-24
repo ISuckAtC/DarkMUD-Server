@@ -103,6 +103,7 @@ namespace Session
                     else
                     {
                         await Send(s, "Wrong password!\n");
+                        await GetResponse(s);
                         Authenticate(s);
                     }
                 }

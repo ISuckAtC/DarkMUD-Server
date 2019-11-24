@@ -16,7 +16,7 @@ namespace Session
 
         int id;
 
-        string username = "";
+        Player.PlayerClass Player;
 
         public async Task Session(TcpClient c, int _id)
         {
@@ -30,13 +30,7 @@ namespace Session
 
             Console.WriteLine("[{0}] Aquired stream...", id);
 
-            await Send(stream, "Welcome!\nPlease pick a username");
-            
-            while(username == "")
-            {
-                await Send(stream, "Please pick a username");
-                username = await GetResponse(stream);
-            }
+            Authenticate(stream);
 
             while (true)
             {
@@ -61,7 +55,7 @@ namespace Session
                     case "shout":
                         foreach (DarkMUD_Server.SessionRef sRef in DarkMUD_Server.Server.Sessions.Where(x => x != null))
                         {
-                            try {await Send(sRef.client.GetStream(), username + ": " + string.Join(' ', command.Skip(1)));}
+                            try {await Send(sRef.client.GetStream(), Player.username + ": " + string.Join(' ', command.Skip(1)));}
                             catch (Exception e) { Console.WriteLine("[{0}] " + e, id);}
                         }
                         break;
@@ -79,6 +73,57 @@ namespace Session
 
             DarkMUD_Server.Server.Sessions[id] = null;
 
+            return;
+        }
+
+        async void Authenticate(NetworkStream s)
+        {
+            await Send(s, "What is your name: ");
+            string username = await GetResponse(s);
+            if (username == string.Empty)
+            {
+                await Send(s, "Your username cannot be empty!\n");
+                await GetResponse(s);
+                Authenticate(s);
+            }
+            else
+            {
+                if (DarkMUD_Server.Server.Players.Exists(x => x.username == username))
+                {
+                    Player.PlayerClass player = DarkMUD_Server.Server.Players.Find(x => x.username == username);
+                    await Send(s, "Password: ");
+                    string password = await GetResponse(s);
+
+                    if (player.password == password)
+                    {
+                        await Send(s, "You have logged in!\n");
+                        Player = player;
+                        DarkMUD_Server.Server.Sessions[id].player = Player;
+                    }
+                    else
+                    {
+                        await Send(s, "Wrong password!\n");
+                        Authenticate(s);
+                    }
+                }
+                else
+                {
+                    await Send(s, "You're new around these parts, please pick a password to create a new account, or leave it blank to return to the username selection\nPassword: ");
+                    string password = await GetResponse(s);
+                    if (password == string.Empty)
+                    {
+                        await Send(s, string.Empty);
+                        await GetResponse(s);
+                        Authenticate(s);
+                    }
+                    else
+                    {
+                        Player = new Player.PlayerClass(username, password);
+                        DarkMUD_Server.Server.Players.Add(Player);
+                        await Send(s, "You have logged in!\n");
+                    }
+                }
+            }
             return;
         }
 
@@ -103,7 +148,6 @@ namespace Session
 
         async Task Send(NetworkStream s, string message) 
         { 
-            //Console.WriteLine("Sending: " + message);
             byte[] bytes = Encoding.ASCII.GetBytes(message + "END");
             await s.WriteAsync(bytes, 0, bytes.Length); 
         }

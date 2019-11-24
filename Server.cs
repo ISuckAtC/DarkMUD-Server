@@ -5,11 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+
 
 namespace DarkMUD_Server
 {
     class SessionRef
     {
+        public Player.PlayerClass player;
         public TcpClient client;
         public Task task;
 
@@ -26,9 +31,25 @@ namespace DarkMUD_Server
         static string[] config = File.ReadAllLines("config.txt");
 
         public static int MaxPlayers = int.Parse(config[2]);
-        public static SessionRef[] Sessions = new SessionRef[1000];
+        public static SessionRef[] Sessions = new SessionRef[MaxPlayers];
+
+        public static int autoSaveInterval = int.Parse(config[3]);
+
+        public static List<Player.PlayerClass> Players = new List<Player.PlayerClass>();
+
+        public async Task AutoSave()
+        {
+            await Task.Delay(autoSaveInterval);
+            File.WriteAllText("players.json", JArray.FromObject(Players).ToString());
+            Console.WriteLine("Autosave complete!");
+        }
+
         static void Main(string[] args)
         {
+            if (File.ReadAllText("players.json").Length != 0) Players = JArray.Parse(File.ReadAllText("players.json")).ToObject(typeof(List<Player.PlayerClass>)) as List<Player.PlayerClass>;
+
+            Console.WriteLine("Loaded {0} players", Players.Count);
+
             string ipAdress = config[0];
             int port = int.Parse(config[1]);
 	
@@ -37,6 +58,8 @@ namespace DarkMUD_Server
 
             server.Start();
             Console.WriteLine("Server started on {0}:{1} \n", ipAdress, port);
+
+            Task autoSave = Task.Run(() => new DarkMUD_Server.Server().AutoSave());
 
             while(true)
             {

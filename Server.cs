@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Objects;
+using Server;
 
 
 
-namespace DarkMUD_Server
+namespace Server
 {
     class SessionRef
     {
-        public Player.PlayerClass player;
+        public Player player;
         public TcpClient client;
         public Task task;
 
@@ -35,33 +37,47 @@ namespace DarkMUD_Server
 
         public static int autoSaveInterval = int.Parse(config[3]);
 
-        public static List<Player.PlayerClass> Players = new List<Player.PlayerClass>();
+        public static List<Player> Players = new List<Player>();
+
+        public static Tile[,] Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))];
+
+        public static Coordinate startPosition = new Coordinate(2, 2);
 
         public async Task AutoSave()
         {
             await Task.Delay(autoSaveInterval);
-            File.WriteAllText("players.json", JArray.FromObject(Players).ToString());
+            Save();
             Console.WriteLine("Autosave complete!");
         }
 
+        public static void Save()
+        {
+            File.WriteAllText("players.json", JArray.FromObject(Players).ToString());
+            File.WriteAllText("tiles.json", JArray.FromObject(Tiles).ToString());
+        }
+
+
+
         static void Main(string[] args)
         {
-            if (File.ReadAllText("players.json").Length != 0) Players = JArray.Parse(File.ReadAllText("players.json")).ToObject(typeof(List<Player.PlayerClass>)) as List<Player.PlayerClass>;
+            if (File.ReadAllText("players.json").Length != 0) Players = JArray.Parse(File.ReadAllText("players.json")).ToObject(typeof(List<Player>)) as List<Player>;
+            if (File.ReadAllText("tiles.json").Length != 0) Tiles = JArray.Parse(File.ReadAllText("tiles.json")).ToObject(typeof(Tile[,])) as Tile[,];
+            else Tiles = new Tile[5, 5].InitiateCollection(() => new Tile());
 
             Console.WriteLine("Loaded {0} players", Players.Count);
 
             string ipAdress = config[0];
             int port = int.Parse(config[1]);
-	
-		    Console.WriteLine("Starting server...");
+
+            Console.WriteLine("Starting server...");
             TcpListener server = new TcpListener(IPAddress.Parse(ipAdress), port);
 
             server.Start();
             Console.WriteLine("Server started on {0}:{1} \n", ipAdress, port);
 
-            Task autoSave = Task.Run(() => new DarkMUD_Server.Server().AutoSave());
+            Task autoSave = Task.Run(() => new global::Server.Server().AutoSave());
 
-            while(true)
+            while (true)
             {
                 Console.WriteLine("Waiting for client to connect...");
                 TcpClient client = server.AcceptTcpClient();

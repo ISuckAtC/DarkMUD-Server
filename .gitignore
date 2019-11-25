@@ -1,7 +1,8 @@
 /*
 !Server.cs
 !Session.cs
-!Player.cs
+!Objects.cs
 !DarkMUD-Server.csproj
 !.gitignore
 !players.json
+!tiles.json

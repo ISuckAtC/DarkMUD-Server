@@ -39,7 +39,7 @@ namespace Server
 
         public static List<Player> Players = new List<Player>();
 
-        public static Tile[,] Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))];
+        public static Tile[,] Tiles;
 
         public static Coordinate startPosition = new Coordinate(2, 2);
 
@@ -62,7 +62,7 @@ namespace Server
         {
             if (File.ReadAllText("players.json").Length != 0) Players = JArray.Parse(File.ReadAllText("players.json")).ToObject(typeof(List<Player>)) as List<Player>;
             if (File.ReadAllText("tiles.json").Length != 0) Tiles = JArray.Parse(File.ReadAllText("tiles.json")).ToObject(typeof(Tile[,])) as Tile[,];
-            else Tiles = new Tile[5, 5].InitiateCollection(() => new Tile());
+            else Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))].InitiateCollection(() => new Tile());
 
             Console.WriteLine("Loaded {0} players", Players.Count);
 

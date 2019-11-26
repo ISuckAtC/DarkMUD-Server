@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Objects
 {
@@ -12,20 +14,114 @@ namespace Objects
             this.y = y;
         }
     }
-    public class Player
+
+    public class Behaviors
     {
-        public string username, password;
+        public static async Task Behavior(List<Monster> mobs)
+        {
+            foreach(Monster c in mobs.FindAll(x => x.Dead == 0)) await Task.Run(() => c.Behavior);
+            foreach(Monster c in mobs.FindAll(x => x.Dead != 0)) --c.Dead;
+            await Task.Delay(Server.Server.TickLength);
+        }
 
-        public Coordinate position;
+        public static async Task Goblin(Monster goblin)
+        {
+            if (goblin.Health <= 0) goblin.Dead = goblin.RespawnTime;
+            if (goblin.Dead == 0)
+            {
+                if (goblin.Target != null)
+                {
+                    Action result = Action.ResolveAction("Basic", goblin, goblin.Target, 1);
+                    foreach (Server.SessionRef s in Server.Server.Sessions.FindAll(x => x.Player.Position == goblin.Position)) await Session.SessionHost.Send(s.Client.GetStream(), result.result);
+                }
+            }
+        }
+    }
 
+    public class Action
+    {
+        public string result;
+        public int cooldown;
+
+        public static Action ResolveAction(string action, Character t = null, Character s = null, int d = 0, int c = 0)
+        {
+            switch (action)
+            {
+                case "Basic": return Basic(t, s, d, c);
+                default: return new Action() {result = "Unknown action"};
+            }
+        }
+        public static Action Basic(Character target, Character source, int Damage, int cooldown)
+        {
+            string result = "" + ("{0} {1} {2} for {3} damage!", source.Name, source.WeaponSound, target.Name, Damage);
+            return new Action(){result = result, cooldown = cooldown};
+        }
+    }
+
+    public class Character
+    {
+        public string Name, WeaponSound;
+
+        public Character Target;
+
+        public int Health;
+        public Coordinate Position;
+    }
+
+    public class Monster : Character
+    {
+        public int Dead;
+        public Task Behavior;
+        public int RespawnTime;
+
+        public int Cooldown;
+
+        public string MonsterType;
+
+        public Monster(string Name, string WeaponSound, int Health, int RespawnTime, Task Behavior, Coordinate Position, string MonsterType)
+        {
+            this.Name = Name;
+            this.WeaponSound = WeaponSound;
+            this.Health = Health;
+            this.RespawnTime = RespawnTime;
+            this.Behavior = Behavior;
+            this.Position = Position;
+            this.MonsterType = MonsterType;
+            Dead = 0;
+            Cooldown = 0;
+            Behavior = GetBehavior();
+        }
+
+        Task GetBehavior()
+        {
+            switch(MonsterType)
+            {
+                case "Goblin":
+                return Behaviors.Goblin(this);
+
+                default: return new Task(() => Console.WriteLine("you fucked up"));
+            }
+        }
+    }
+
+    public class Player : Character
+    {
+        public List<string> Actions;
+        public string Password;
         public bool admin = false;
 
-        public Player(string username, string password, Coordinate position)
+        public Player(string username, string password, Coordinate position, int Health)
         {
-            this.username = username;
-            this.password = password;
-            this.position = position;
+            this.Name = username;
+            this.Password = password;
+            this.Position = position;
+            this.Health = Health;
+            WeaponSound = "punches";
+            Actions = new List<string>();
+            Actions.Add("Basic");
         }
+
+        
     }
 
     public class Tile
@@ -67,7 +163,7 @@ namespace Objects
         public static string Namelist(this List<Player> players)
         {
             string s = "";
-            for (int x = 0; x < players.Count; ++x) s += (players[x].admin ? "[A] " : "") + players[x].username + "\n";
+            for (int x = 0; x < players.Count; ++x) s += (players[x].admin ? "[A] " : "") + players[x].Name + "\n";
             return s;
         }
     }

@@ -16,15 +16,15 @@ namespace Server
 {
     class SessionRef
     {
-        public Player player;
-        public TcpClient client;
-        public Task task;
+        public Player Player;
+        public TcpClient Client;
+        public Task Task;
 
         public int id;
         public SessionRef(TcpClient client, Task task, int id)
         {
-            this.client = client;
-            this.task = task;
+            this.Client = client;
+            this.Task = task;
             this.id = id;
         }
     }
@@ -33,15 +33,19 @@ namespace Server
         static string[] config = File.ReadAllLines("config.txt");
 
         public static int MaxPlayers = int.Parse(config[2]);
-        public static SessionRef[] Sessions = new SessionRef[MaxPlayers];
+        public static List<SessionRef> Sessions = new List<SessionRef>();
 
         public static int autoSaveInterval = int.Parse(config[3]);
 
         public static List<Player> Players = new List<Player>();
 
+        public static List<Monster> Monsters = new List<Monster>();
+
         public static Tile[,] Tiles;
 
         public static Coordinate startPosition = new Coordinate(2, 2);
+
+        public static int TickLength = int.Parse(config[5]);
 
         public async Task AutoSave()
         {

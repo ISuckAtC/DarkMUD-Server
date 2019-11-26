@@ -56,7 +56,7 @@ namespace Session
                     case "shout":
                         foreach (Server.SessionRef sRef in Server.Server.Sessions.Where(x => x != null))
                         {
-                            try { await Send(sRef.client.GetStream(), Player.username + ": " + string.Join(' ', command.Skip(1))); }
+                            try { await Send(sRef.Client.GetStream(), Player.Name + ": " + string.Join(' ', command.Skip(1))); }
                             catch (Exception e) { Console.WriteLine("[{0}] " + e, id); }
                         }
                         break;
@@ -64,42 +64,42 @@ namespace Session
                     case "examine":
                         if (command.Length == 1)
                         {
-                            await Send(stream, "You examine your surroundings.\n" + Server.Server.Tiles[Player.position.x, Player.position.y].Examine());
+                            await Send(stream, "You examine your surroundings.\n" + Server.Server.Tiles[Player.Position.x, Player.Position.y].Examine());
                         }
                         break;
 
                     case "n":
                     case "north":
-                        if (Server.Server.Tiles[Player.position.x, Player.position.y].n)
+                        if (Server.Server.Tiles[Player.Position.x, Player.Position.y].n)
                         {
-                            Player.position = new Coordinate(Player.position.x, Player.position.y + 1);
+                            Player.Position = new Coordinate(Player.Position.x, Player.Position.y + 1);
                             await Send(stream, "You walk north.");
                         } else await Send(stream, "There is no exit to the north!");
                         break;
 
                     case "s":
                     case "south":
-                        if (Server.Server.Tiles[Player.position.x, Player.position.y].s)
+                        if (Server.Server.Tiles[Player.Position.x, Player.Position.y].s)
                         {
-                            Player.position = new Coordinate(Player.position.x, Player.position.y - 1);
+                            Player.Position = new Coordinate(Player.Position.x, Player.Position.y - 1);
                             await Send(stream, "You walk south.");
                         } else await Send(stream, "There is no exit to the south!");
                         break;
 
                     case "e":
                     case "east":
-                        if (Server.Server.Tiles[Player.position.x, Player.position.y].e)
+                        if (Server.Server.Tiles[Player.Position.x, Player.Position.y].e)
                         {
-                            Player.position = new Coordinate(Player.position.x + 1, Player.position.y); 
+                            Player.Position = new Coordinate(Player.Position.x + 1, Player.Position.y); 
                             await Send(stream, "You walk east.");
                         } else await Send(stream, "There is no exit to the east!");
                         break;
 
                     case "w":
                     case "west":
-                        if (Server.Server.Tiles[Player.position.x, Player.position.y].w)
+                        if (Server.Server.Tiles[Player.Position.x, Player.Position.y].w)
                         {
-                            Player.position = new Coordinate(Player.position.x - 1, Player.position.y);
+                            Player.Position = new Coordinate(Player.Position.x - 1, Player.Position.y);
                             await Send(stream, "You walk west.");
                         } else await Send(stream, "There is no exit to the west!");
                         break;
@@ -148,17 +148,17 @@ namespace Session
             }
             else
             {
-                if (Server.Server.Players.Exists(x => x.username == username))
+                if (Server.Server.Players.Exists(x => x.Name == username))
                 {
-                    Player player = Server.Server.Players.Find(x => x.username == username);
+                    Player player = Server.Server.Players.Find(x => x.Name == username);
                     await Send(s, "Password: ");
                     string password = await GetResponse(s);
 
-                    if (player.password == password)
+                    if (player.Password == password)
                     {
                         await Send(s, "You have logged in!\n");
                         Player = player;
-                        Server.Server.Sessions[id].player = Player;
+                        Server.Server.Sessions[id].Player = Player;
                     }
                     else
                     {
@@ -179,7 +179,7 @@ namespace Session
                     }
                     else
                     {
-                        Player = new Player(username, password, Server.Server.startPosition);
+                        Player = new Player(username, password, Server.Server.startPosition, 50);
                         Server.Server.Players.Add(Player);
                         await Send(s, "You have logged in!\n");
                     }
@@ -207,7 +207,7 @@ namespace Session
             Server.Server.Sessions[id] = null;
         }
 
-        async Task Send(NetworkStream s, string message)
+        public static async Task Send(NetworkStream s, string message)
         {
             byte[] bytes = Encoding.ASCII.GetBytes(message + "END");
             await s.WriteAsync(bytes, 0, bytes.Length);

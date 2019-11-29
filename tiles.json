@@ -5,35 +5,40 @@
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     }
   ],
   [
@@ -42,35 +47,40 @@
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     }
   ],
   [
@@ -79,35 +89,40 @@
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": true,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": true,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": true
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     }
   ],
   [
@@ -116,35 +131,40 @@
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     }
   ],
   [
@@ -153,35 +173,40 @@
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     },
     {
       "description": "Test description",
       "n": false,
       "s": false,
       "w": false,
-      "e": false
+      "e": false,
+      "pvp": false
     }
   ]
 ]

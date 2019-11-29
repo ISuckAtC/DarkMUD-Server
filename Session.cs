@@ -11,13 +11,25 @@ namespace Session
 {
     class SessionHost
     {
-        static int bufferSize = 8192;
-
         static int secondsTimeout = 300;
+
 
         int id;
 
+        CancellationTokenSource timeout = new CancellationTokenSource();
+
         Player Player;
+
+        TcpClient client;
+
+        NetworkStream stream;
+
+        public void Yeet()
+        {
+            stream.Close();
+            client.Close();
+            Server.Server.Sessions.Remove(Server.Server.Sessions.Find(x => x.id == id));
+        }
 
         public async Task Session(TcpClient c, int _id)
         {
@@ -25,9 +37,9 @@ namespace Session
 
             Console.WriteLine("[{0}] Client connected", id);
 
-            TcpClient client = c;
+            client = c;
 
-            NetworkStream stream = client.GetStream();
+            stream = client.GetStream();
 
             Console.WriteLine("[{0}] Aquired stream...", id);
 
@@ -35,10 +47,10 @@ namespace Session
 
             while (true)
             {
-                CancellationTokenSource timeout = new CancellationTokenSource();
                 Task timing = Task.Run(() => Timeout(secondsTimeout, stream, client, timeout));
 
-                string message = await GetResponse(stream);
+                string message = await Methods.GetResponse(stream);
+
                 Console.WriteLine("[{0}] CLIENT: " + message, id);
 
                 timeout.Cancel();
@@ -50,21 +62,47 @@ namespace Session
                 switch (command[0].ToLower())
                 {
                     case "ping":
-                        await Send(stream, "Pong!");
+                        await Methods.Send(stream, "Pong!");
                         break;
 
                     case "shout":
-                        foreach (Server.SessionRef sRef in Server.Server.Sessions.Where(x => x != null))
+                        foreach (Server.SessionRef sRef in Server.Server.Sessions)
                         {
-                            try { await Send(sRef.Client.GetStream(), Player.Name + ": " + string.Join(' ', command.Skip(1))); }
+                            try { await Methods.Send(sRef.Client.GetStream(), Player.Name + ": " + string.Join(' ', command.Skip(1))); }
                             catch (Exception e) { Console.WriteLine("[{0}] " + e, id); }
                         }
+                        break;
+
+                    case "attack":
+                        if (command.Length > 1)
+                        {
+                            string target = string.Join(' ', command.Skip(1));
+                            var monster = Server.Server.Monsters.Find(x => x.Position.Same(Player.Position) && x.Dead == 0 && x.Name == target);
+
+                            Server.SessionRef session;
+
+                            if (Server.Server.Sessions.Count > 1) session = Server.Server.Sessions.Find(x => x.Player.Position.Same(Player.Position) && x.Player.Name == target);
+                            else session = null;
+
+                            if (monster != null) Player.Target = monster;
+                            else if (session != null) 
+                            {
+                                
+                                if (Server.Server.Tiles[Player.Position.x, Player.Position.y].pvp) Player.Target = session.Player;
+                                else await Methods.Send(stream, "PvP is not enabled here!\n");
+                            }
+                            else await Methods.Send(stream, "There are no targets by that name.\n");
+                        } else await Methods.Send(stream, "Please provide a target to attack.\n");
+                        break;
+
+                    case "stopattack":
+                        Player.Target = null;
                         break;
 
                     case "examine":
                         if (command.Length == 1)
                         {
-                            await Send(stream, "You examine your surroundings.\n" + Server.Server.Tiles[Player.Position.x, Player.Position.y].Examine());
+                            await Methods.Send(stream, "You examine your surroundings.\n" + Player.Examine());
                         }
                         break;
 
@@ -73,8 +111,8 @@ namespace Session
                         if (Server.Server.Tiles[Player.Position.x, Player.Position.y].n)
                         {
                             Player.Position = new Coordinate(Player.Position.x, Player.Position.y + 1);
-                            await Send(stream, "You walk north.");
-                        } else await Send(stream, "There is no exit to the north!");
+                            await Methods.Send(stream, "You walk north.");
+                        } else await Methods.Send(stream, "There is no exit to the north!");
                         break;
 
                     case "s":
@@ -82,8 +120,8 @@ namespace Session
                         if (Server.Server.Tiles[Player.Position.x, Player.Position.y].s)
                         {
                             Player.Position = new Coordinate(Player.Position.x, Player.Position.y - 1);
-                            await Send(stream, "You walk south.");
-                        } else await Send(stream, "There is no exit to the south!");
+                            await Methods.Send(stream, "You walk south.");
+                        } else await Methods.Send(stream, "There is no exit to the south!");
                         break;
 
                     case "e":
@@ -91,8 +129,8 @@ namespace Session
                         if (Server.Server.Tiles[Player.Position.x, Player.Position.y].e)
                         {
                             Player.Position = new Coordinate(Player.Position.x + 1, Player.Position.y); 
-                            await Send(stream, "You walk east.");
-                        } else await Send(stream, "There is no exit to the east!");
+                            await Methods.Send(stream, "You walk east.");
+                        } else await Methods.Send(stream, "There is no exit to the east!");
                         break;
 
                     case "w":
@@ -100,50 +138,51 @@ namespace Session
                         if (Server.Server.Tiles[Player.Position.x, Player.Position.y].w)
                         {
                             Player.Position = new Coordinate(Player.Position.x - 1, Player.Position.y);
-                            await Send(stream, "You walk west.");
-                        } else await Send(stream, "There is no exit to the west!");
+                            await Methods.Send(stream, "You walk west.");
+                        } else await Methods.Send(stream, "There is no exit to the west!");
                         break;
 
 
                     case "playerlist":
                         if (Player.admin)
                         {
-                            await Send(stream, Server.Server.Players.Namelist());
-                        } else await Send(stream, "This is an admin only command!");
+                            await Methods.Send(stream, Server.Server.Players.Namelist());
+                        } else await Methods.Send(stream, "This is an admin only command!");
+                        break;
+
+                    case "online":
+                        foreach (Server.SessionRef sRef in Server.Server.Sessions) await Methods.Send(stream, sRef.Player.Username + "\n");
                         break;
 
                     case "serversave":
                         if (Player.admin)
                         {
                             Server.Server.Save();
-                            await Send(stream, "Saved!");
-                        } else await Send(stream, "This is an admin only command!");
+                            await Methods.Send(stream, "Saved!");
+                        } else await Methods.Send(stream, "This is an admin only command!");
                         break;
 
                     default:
-                        await Send(stream, "Unknown Command.");
+                        await Methods.Send(stream, "Unknown Command.");
                         break;
                 }
             }
 
             Console.WriteLine("[{0}] Closing session...", id);
 
-            stream.Close();
-            client.Close();
-
-            Server.Server.Sessions[id] = null;
+            Yeet();
 
             return;
         }
 
         async void Authenticate(NetworkStream s)
         {
-            await Send(s, "What is your name: ");
-            string username = await GetResponse(s);
+            await Methods.Send(s, "What is your name: ");
+            string username = await Methods.GetResponse(s);
             if (username == string.Empty)
             {
-                await Send(s, "Your username cannot be empty!\n");
-                await GetResponse(s);
+                await Methods.Send(s, "Your username cannot be empty!\n");
+                await Methods.GetResponse(s);
                 Authenticate(s);
             }
             else
@@ -151,37 +190,52 @@ namespace Session
                 if (Server.Server.Players.Exists(x => x.Name == username))
                 {
                     Player player = Server.Server.Players.Find(x => x.Name == username);
-                    await Send(s, "Password: ");
-                    string password = await GetResponse(s);
+                    await Methods.Send(s, "Password: ");
+                    string password = await Methods.GetResponse(s);
 
                     if (player.Password == password)
                     {
-                        await Send(s, "You have logged in!\n");
                         Player = player;
-                        Server.Server.Sessions[id].Player = Player;
+                        if (Server.Server.Sessions.Exists(x => x.Player == Player))
+                        {
+                            await Methods.Send(s, "Another session is active on this player.");
+                            await Methods.GetResponse(s);
+                            Authenticate(s);
+                        } 
+                        else
+                        {
+                            await Methods.Send(s, "You have logged in!\n");
+                            Server.Server.Sessions.Find(x => x.id == id).Player = Player;
+                        }
                     }
                     else
                     {
-                        await Send(s, "Wrong password!\n");
-                        await GetResponse(s);
+                        await Methods.Send(s, "Wrong password!\n");
+                        await Methods.GetResponse(s);
                         Authenticate(s);
                     }
                 }
                 else
                 {
-                    await Send(s, "You're new around these parts, please pick a password to create a new account, or leave it blank to return to the username selection\nPassword: ");
-                    string password = await GetResponse(s);
+                    await Methods.Send(s, "You're new around these parts, please pick a password to create a new account, or leave it blank to return to the username selection\nPassword: ");
+                    string password = await Methods.GetResponse(s);
                     if (password == string.Empty)
                     {
-                        await Send(s, string.Empty);
-                        await GetResponse(s);
+                        await Methods.Send(s, string.Empty);
+                        await Methods.GetResponse(s);
                         Authenticate(s);
                     }
                     else
                     {
                         Player = new Player(username, password, Server.Server.startPosition, 50);
                         Server.Server.Players.Add(Player);
-                        await Send(s, "You have logged in!\n");
+                        if (Server.Server.Sessions.Exists(x => x.Player == Player))
+                        {
+                            await Methods.Send(s, "Another session was active on this player, they have been booted off.");
+                            Server.Server.Sessions.Find(x => x.Player == Player).id = -1;
+                        }
+                        Server.Server.Sessions.Find(x => x.id == id).Player = Player;
+                        await Methods.Send(s, "You have logged in!\n");
                     }
                 }
             }
@@ -196,35 +250,13 @@ namespace Session
                 if (cancel.IsCancellationRequested) throw new TaskCanceledException();
             }
             Console.WriteLine("[{0}] Session timed out!", id);
-            try { await Send(s, "Your session has timed out!"); }
+            try { await Methods.Send(s, "Your session has timed out!"); }
             catch (Exception e) { Console.WriteLine("[{0}] {1}", id, e); }
 
 
             Console.WriteLine("[{0}] Closing session...", id);
 
-            s.Close();
-            c.Close();
-            Server.Server.Sessions[id] = null;
-        }
-
-        public static async Task Send(NetworkStream s, string message)
-        {
-            byte[] bytes = Encoding.ASCII.GetBytes(message + "END");
-            await s.WriteAsync(bytes, 0, bytes.Length);
-        }
-
-        async Task<string> GetResponse(NetworkStream s)
-        {
-            Byte[] response = new Byte[bufferSize];
-
-            Console.WriteLine("[{0}] Listening...", id);
-
-            while (!s.DataAvailable) ;
-            while (s.DataAvailable) await s.ReadAsync(response, 0, response.Length);
-
-            string responseS = Encoding.ASCII.GetString(response, 0, response.Length);
-
-            return responseS.Substring(0, responseS.IndexOf("END"));
+            Yeet();
         }
     }
 }

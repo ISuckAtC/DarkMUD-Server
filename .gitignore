@@ -2,6 +2,7 @@
 !Server.cs
 !Session.cs
 !Objects.cs
+!Monsters.cs
 !DarkMUD-Server.csproj
 !.gitignore
 !players.json

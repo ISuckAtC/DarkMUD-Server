@@ -1,20 +1,26 @@
 [
   {
-    "username": "Ross",
-    "password": "hunter2",
-    "position": {
+    "Username": "Ross",
+    "Cooldown": 0,
+    "Skills": [
+      "Basic"
+    ],
+    "Password": "d39a1235e463afa5186fda888363a8125b82aab1882307f76454767b64b0041c",
+    "admin": false,
+    "Respawn": {
       "x": 2,
       "y": 2
     },
-    "admin": true
-  },
-  {
-    "username": "Justin",
-    "password": "omegalul",
-    "position": {
+    "Name": "Ross",
+    "WeaponSound": "punches",
+    "Target": null,
+    "Retaliate": false,
+    "Health": 50,
+    "MaxHealth": 50,
+    "Dead": 0,
+    "Position": {
       "x": 2,
       "y": 2
-    },
-    "admin": false
+    }
   }
 ]

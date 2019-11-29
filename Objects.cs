@@ -1,4 +1,7 @@
 using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,48 +16,35 @@ namespace Objects
             this.x = x;
             this.y = y;
         }
+
+        public bool Same(Coordinate c) { return x == c.x && y == c.y; }
     }
 
-    public class Behaviors
+
+    public enum Actions
     {
-        public static async Task Behavior(List<Monster> mobs)
-        {
-            foreach(Monster c in mobs.FindAll(x => x.Dead == 0)) await Task.Run(() => c.Behavior);
-            foreach(Monster c in mobs.FindAll(x => x.Dead != 0)) --c.Dead;
-            await Task.Delay(Server.Server.TickLength);
-        }
-
-        public static async Task Goblin(Monster goblin)
-        {
-            if (goblin.Health <= 0) goblin.Dead = goblin.RespawnTime;
-            if (goblin.Dead == 0)
-            {
-                if (goblin.Target != null)
-                {
-                    Action result = Action.ResolveAction("Basic", goblin, goblin.Target, 1);
-                    foreach (Server.SessionRef s in Server.Server.Sessions.FindAll(x => x.Player.Position == goblin.Position)) await Session.SessionHost.Send(s.Client.GetStream(), result.result);
-                }
-            }
-        }
+        Basic
     }
 
-    public class Action
+    public class MAction
     {
         public string result;
         public int cooldown;
 
-        public static Action ResolveAction(string action, Character t = null, Character s = null, int d = 0, int c = 0)
+        public static MAction ResolveAction(Actions action, Character s = null, int d = 0, int c = 0)
         {
             switch (action)
             {
-                case "Basic": return Basic(t, s, d, c);
-                default: return new Action() {result = "Unknown action"};
+                case Actions.Basic: return Basic(s, d, c);
+                default: return new MAction() {result = "Unknown action"};
             }
         }
-        public static Action Basic(Character target, Character source, int Damage, int cooldown)
+        public static MAction Basic(Character source, int Damage, int cooldown)
         {
-            string result = "" + ("{0} {1} {2} for {3} damage!", source.Name, source.WeaponSound, target.Name, Damage);
-            return new Action(){result = result, cooldown = cooldown};
+            source.Target.Health -= Damage;
+            if (source.Target.Retaliate && source.Target.Target == null) source.Target.Target = source;
+            string result = source.Name + " " + source.WeaponSound + " " + source.Target.Name + " for " + Damage + " damage!";
+            return new MAction(){result = result, cooldown = cooldown};
         }
     }
 
@@ -64,61 +54,133 @@ namespace Objects
 
         public Character Target;
 
-        public int Health;
-        public Coordinate Position;
-    }
+        public bool Retaliate;
 
-    public class Monster : Character
-    {
-        public int Dead;
-        public Task Behavior;
-        public int RespawnTime;
+        public virtual void Behavior() {}
 
-        public int Cooldown;
-
-        public string MonsterType;
-
-        public Monster(string Name, string WeaponSound, int Health, int RespawnTime, Task Behavior, Coordinate Position, string MonsterType)
+        public virtual void Die() 
         {
-            this.Name = Name;
-            this.WeaponSound = WeaponSound;
-            this.Health = Health;
-            this.RespawnTime = RespawnTime;
-            this.Behavior = Behavior;
-            this.Position = Position;
-            this.MonsterType = MonsterType;
-            Dead = 0;
-            Cooldown = 0;
-            Behavior = GetBehavior();
+            Target = null;
+            Health = MaxHealth;
+            Task.Run(() => Methods.Announce(Name + " has died!", Position));
         }
 
-        Task GetBehavior()
-        {
-            switch(MonsterType)
-            {
-                case "Goblin":
-                return Behaviors.Goblin(this);
+        public int Health, MaxHealth, Dead;
+        public Coordinate Position;
+        
+    }
 
-                default: return new Task(() => Console.WriteLine("you fucked up"));
-            }
+    public abstract class Monster : Character
+    {
+        public int Damage;
+        public int RespawnTime;
+        public int Cooldown;
+
+        public override void Die()
+        {
+            Target = null;
+            Dead = RespawnTime;
+            Health = MaxHealth;
+            Task.Run(() => Methods.Announce(Name + " has died!", Position));
         }
     }
 
     public class Player : Character
     {
-        public List<string> Actions;
+        public string Username;
+
+        public int Cooldown;
+        public List<string> Skills;
         public string Password;
         public bool admin = false;
 
-        public Player(string username, string password, Coordinate position, int Health)
+        public Coordinate Respawn;
+
+        public override void Die()
         {
+            Target = null;
+            Health = MaxHealth;
+            Coordinate deathLoc = new Coordinate(Position.x, Position.y);
+            Task.Run(() => Methods.Announce(Name + " has died!", deathLoc, this));
+            Task.Run(() => Methods.Send(Server.Server.Sessions.Find(x => x.Player == this).Client.GetStream(), "Oof, you are dead!"));
+            Position = Respawn;
+        }
+
+        public override void Behavior()
+        {
+            if (Health <= 0) Die();
+            if (Cooldown == 0 && Target != null)
+            {
+                if (Target.Dead > 0 || !Target.Position.Same(Position)) Target = null;
+                else
+                {
+                    MAction attack = MAction.ResolveAction(Actions.Basic, this, 3, 3);
+                    Task.Run(() => Methods.Announce(attack.result, Position));
+                    Cooldown += attack.cooldown;
+                }
+            }
+            if (Cooldown > 0)
+            {
+                --Cooldown;
+            }
+        }
+
+        public string Examine()
+        {
+            Tile tile = Server.Server.Tiles[Position.x, Position.y];
+            string examine = tile.description;
+
+
+            if (Server.Server.Sessions.Count > 1)
+            {
+                var activePlayers = Server.Server.Sessions.FindAll(x => x.Player != this && x.Player.Position.Same(Position));
+
+                if (activePlayers.Count > 0)
+                {
+                    examine += "\nYou can see ";
+                    examine += activePlayers[0].Player.Name;
+                    if (activePlayers.Count > 1)
+                    {
+                        for (int x = 0; x < activePlayers.Count; ++x)
+                        {
+                            examine += (activePlayers.Count == x + 1 ? " and " + activePlayers[x].Player.Name : ", " + activePlayers[x].Player.Name);
+                        }
+                    }
+                    examine += ".\n";
+                }
+            }
+
+            List<Monster> monsters = Server.Server.Monsters.FindAll(x => x.Dead == 0 && x.Position.Same(Position));
+
+            if (monsters.Count > 0)
+            {
+                examine += "\nYou can see ";
+                examine += monsters[0].Name;
+                if (monsters.Count > 1) 
+                {
+                    for (int x = 0; x < monsters.Count; ++x) examine += (monsters.Count == x + 1 ? " and " + monsters[x].Name : ", " + monsters[x].Name);
+                }
+                examine += ".\n";
+            }
+
+            examine += "\nExits: " + (!(tile.n || tile.s || tile.e || tile.w) ? "None" : "") + (tile.n ? "North" + (tile.s || tile.e || tile.w ? " : " : "") : "") + (tile.s ? "South" + (tile.e || tile.w ? " : " : "") : "") + (tile.e ? "East" + (tile.w ? " : " : "") : "") + (tile.w ? "West" : "") + ".";
+
+            return examine;
+        }
+
+        public Player(string username, string password, Coordinate respawn, int Health)
+        {
+            this.Username = username;
             this.Name = username;
             this.Password = password;
-            this.Position = position;
+            this.Position = respawn;
+            this.Respawn = respawn;
             this.Health = Health;
+            this.MaxHealth = Health;
+            Retaliate = false;
             WeaponSound = "punches";
-            Actions = new List<string>();
-            Actions.Add("Basic");
+            Skills = new List<string>();
+            Skills.Add("Basic");
         }
 
         
@@ -128,29 +190,22 @@ namespace Objects
     {
         public string description;
 
-        public bool n, s, w, e;
+        public bool n, s, w, e, pvp;
 
-        public Tile(string description = "Test description", bool n = false, bool s = false, bool w = false, bool e = false)
+        public Tile(string description = "Test description", bool n = false, bool s = false, bool w = false, bool e = false, bool pvp = false)
         {
             this.description = description;
             this.n = n;
             this.s = s;
             this.w = w;
             this.e = e;
-        }
-
-        public string Examine()
-        {
-            string examine = description;
-
-            examine += "\nExits: " + (!(n || s || e || w) ? "None" : "") + (n ? "North" + (s || e || w ? " : " : "") : "") + (s ? "South" + (e || w ? " : " : "") : "") + (e ? "East" + (w ? " : " : "") : "") + (w ? "West" : "") + ".";
-
-            return examine;
+            this.pvp = pvp;
         }
     }
 
     public static class Methods
     {
+        static int bufferSize = 8192;
         public static T[,] InitiateCollection<T>(this T[,] arr, Func<T> init)
         {
             for (int x = 0; x < arr.GetLength(0); ++x) for (int y = 0; y < arr.GetLength(1); ++y)
@@ -165,6 +220,32 @@ namespace Objects
             string s = "";
             for (int x = 0; x < players.Count; ++x) s += (players[x].admin ? "[A] " : "") + players[x].Name + "\n";
             return s;
+        }
+
+        public static async Task Send(NetworkStream s, string message)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(message + "END");
+            await s.WriteAsync(bytes, 0, bytes.Length);
+        }
+
+        public static async Task<string> GetResponse(NetworkStream s)
+        {
+            Byte[] response = new Byte[bufferSize];
+
+            while (!s.DataAvailable) ;
+            while (s.DataAvailable) await s.ReadAsync(response, 0, response.Length);
+
+            string responseS = Encoding.UTF8.GetString(response, 0, response.Length);
+
+            return responseS.Substring(0, responseS.IndexOf("END"));
+        }
+
+        public static async Task Announce(string message, Coordinate position, Player self = null)
+        {
+            foreach (Server.SessionRef session in Server.Server.Sessions.FindAll((x => x.Player != self && x.Player.Position.Same(position))))
+            {
+                await Methods.Send(session.Client.GetStream(), message);
+            }
         }
     }
 }

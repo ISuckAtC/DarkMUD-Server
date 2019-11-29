@@ -18,21 +18,19 @@ namespace Server
     {
         public Player Player;
         public TcpClient Client;
-        public Task Task;
+        public Task iTask;
 
         public int id;
         public SessionRef(TcpClient client, Task task, int id)
         {
             this.Client = client;
-            this.Task = task;
+            this.iTask = task;
             this.id = id;
         }
     }
     class Server
     {
         static string[] config = File.ReadAllLines("config.txt");
-
-        public static int MaxPlayers = int.Parse(config[2]);
         public static List<SessionRef> Sessions = new List<SessionRef>();
 
         public static int autoSaveInterval = int.Parse(config[3]);
@@ -47,11 +45,24 @@ namespace Server
 
         public static int TickLength = int.Parse(config[5]);
 
-        public async Task AutoSave()
+        public static async Task Tick()
         {
-            await Task.Delay(autoSaveInterval);
-            Save();
-            Console.WriteLine("Autosave complete!");
+            while (true)
+            {
+                foreach (Monster monster in Monsters) monster.Behavior();
+                foreach (Player player in Players) player.Behavior();
+                await Task.Delay(TickLength);
+            }
+        }
+
+        public static async Task AutoSave()
+        {
+            while (true)
+            {
+                await Task.Delay(autoSaveInterval);
+                Save();
+                Console.WriteLine("Autosave complete!");
+            }
         }
 
         public static void Save()
@@ -66,12 +77,19 @@ namespace Server
         {
             if (File.ReadAllText("players.json").Length != 0) Players = JArray.Parse(File.ReadAllText("players.json")).ToObject(typeof(List<Player>)) as List<Player>;
             if (File.ReadAllText("tiles.json").Length != 0) Tiles = JArray.Parse(File.ReadAllText("tiles.json")).ToObject(typeof(Tile[,])) as Tile[,];
-            else Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))].InitiateCollection(() => new Tile());
+            else 
+            {
+                Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))].InitiateCollection(() => new Tile());
+                Tiles[2,2].n = true;
+                Tiles[2,3].s = true;
+            }
 
             Console.WriteLine("Loaded {0} players", Players.Count);
 
             string ipAdress = config[0];
             int port = int.Parse(config[1]);
+
+            Monsters.Add(new Monsters.Goblin("Steve the Goblin", "claws", 15, 30, 1, new Coordinate(2, 3)));
 
             Console.WriteLine("Starting server...");
             TcpListener server = new TcpListener(IPAddress.Parse(ipAdress), port);
@@ -79,7 +97,8 @@ namespace Server
             server.Start();
             Console.WriteLine("Server started on {0}:{1} \n", ipAdress, port);
 
-            Task autoSave = Task.Run(() => new global::Server.Server().AutoSave());
+            Task autoSave = Task.Run(() => AutoSave());
+            Task tick = Task.Run(() => Tick());
 
             while (true)
             {
@@ -87,10 +106,14 @@ namespace Server
                 TcpClient client = server.AcceptTcpClient();
                 Console.WriteLine("Client connected! Setting up session...");
 
+                int id = 0;
 
-                int firstSpot = MaxPlayers - Sessions.SkipWhile(x => x != null).Count();
+                for(int x = 0; x < Sessions.Count; ++x)
+                {
+                    if (Sessions[x].id == id) id++;
+                }
 
-                Sessions[firstSpot] = new SessionRef(client, Task.Run(() => new Session.SessionHost().Session(client, firstSpot)), firstSpot);
+                Sessions.Insert(id, new SessionRef(client, Task.Run(() => new Session.SessionHost().Session(client, id)), id));
             }
         }
     }

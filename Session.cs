@@ -16,8 +16,6 @@ namespace Session
 
         int id;
 
-        CancellationTokenSource timeout;
-
         Player Player;
 
         TcpClient client;
@@ -48,7 +46,7 @@ namespace Session
 
             CancellationTokenSource authTimeout = new CancellationTokenSource();
 
-            Task timing = Task.Run(() => Timeout(secondsTimeout, stream, client, timeout));
+            Task timing = Task.Run(() => Timeout(secondsTimeout, stream, client, authTimeout));
 
             Authenticate(stream);
 

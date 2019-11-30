@@ -11,12 +11,12 @@ namespace Session
 {
     class SessionHost
     {
-        static int secondsTimeout = 300;
+        static int secondsTimeout = 30;
 
 
         int id;
 
-        CancellationTokenSource timeout = new CancellationTokenSource();
+        CancellationTokenSource timeout;
 
         Player Player;
 
@@ -28,11 +28,14 @@ namespace Session
         {
             stream.Close();
             client.Close();
+            Console.WriteLine("{0} yeet", id);
             Server.Server.Sessions.Remove(Server.Server.Sessions.Find(x => x.id == id));
         }
 
         public async Task Session(TcpClient c, int _id)
         {
+            try
+            {
             id = _id;
 
             Console.WriteLine("[{0}] Client connected", id);
@@ -43,11 +46,19 @@ namespace Session
 
             Console.WriteLine("[{0}] Aquired stream...", id);
 
+            CancellationTokenSource authTimeout = new CancellationTokenSource();
+
+            Task timing = Task.Run(() => Timeout(secondsTimeout, stream, client, timeout));
+
             Authenticate(stream);
+
+            authTimeout.Cancel();
 
             while (true)
             {
-                Task timing = Task.Run(() => Timeout(secondsTimeout, stream, client, timeout));
+                CancellationTokenSource timeout = new CancellationTokenSource();
+
+                timing = Task.Run(() => Timeout(secondsTimeout, stream, client, timeout));
 
                 string message = await Methods.GetResponse(stream);
 
@@ -171,6 +182,8 @@ namespace Session
             Console.WriteLine("[{0}] Closing session...", id);
 
             Yeet();
+            }
+            catch (Exception e) { Console.WriteLine("[{0}]: {1}", id, e); }
 
             return;
         }

@@ -8,11 +8,10 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Objects;
-using Server;
 
 
 
-namespace Server
+namespace MainServer
 {
     class SessionRef
     {
@@ -30,7 +29,7 @@ namespace Server
     }
     class Server
     {
-        static string[] config = File.ReadAllLines("config.txt");
+        public static string[] config = File.ReadAllLines("config.txt");
         public static List<SessionRef> Sessions = new List<SessionRef>();
 
         public static int autoSaveInterval = int.Parse(config[3]);
@@ -42,6 +41,8 @@ namespace Server
         public static Tile[,] Tiles;
 
         public static Coordinate startPosition = new Coordinate(2, 2);
+
+        public static List<Drop[]> DropsTables = new List<Drop[]>();
 
         public static int TickLength = int.Parse(config[5]);
 
@@ -79,17 +80,39 @@ namespace Server
             if (File.ReadAllText("tiles.json").Length != 0) Tiles = JArray.Parse(File.ReadAllText("tiles.json")).ToObject(typeof(Tile[,])) as Tile[,];
             else 
             {
-                Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))].InitiateCollection(() => new Tile());
+                Tiles = new Tile[int.Parse(config[4].Substring(0, config[4].IndexOf('x'))), int.Parse(config[4].Substring(config[4].IndexOf('x') + 1))].InitiateArray2D(() => new Tile());
                 Tiles[2,2].n = true;
                 Tiles[2,3].s = true;
             }
+            if (File.ReadAllText("monsters.json").Length != 0) 
+            {
+                List<MonsterReference> references = (List<MonsterReference>)JArray.Parse(File.ReadAllText("monsters.json")).ToObject(typeof(List<MonsterReference>));
+                Monsters = references.FromBase();
+            }
+            if (File.ReadAllText("drops.json").Length != 0)
+            {
+                DropsTables = (List<Drop[]>)JArray.Parse(File.ReadAllText("drops.json")).ToObject(typeof(List<Drop[]>));
+            }
 
+            Tiles[1,2] = new Tile(description:"Uneven rocky terrain", e:true);
+            Tiles[2,2].w = true;
+
+            Console.WriteLine("Loaded {0} monsters", Monsters.Count);
             Console.WriteLine("Loaded {0} players", Players.Count);
 
             string ipAdress = config[0];
             int port = int.Parse(config[1]);
 
-            Monsters.Add(new Monsters.Goblin("Steve the Goblin", "claws", 15, 30, 1, new Coordinate(2, 3)));
+            Drop[] drops = new Drop[3];
+            drops[0] = new Drop(new Item("Goblin arm", "Back off, rich boy, I'm armed!", WeaponClass.Club), 100);
+            drops[1] = new Drop(new Item("Nothing", ""), 1000);
+            drops[2] = new Drop(new Item("Admin Login", "Username: Ross, Password: fucky"), 1);
+            DropsTables.Add(new Drop[] {new Drop(new Item("Nothing", ""), 1)});
+            DropsTables.Add(drops);
+
+            /*Monsters.Add(new Monsters.Goblin("Steve the Goblin", "claws", 15, 30, new Coordinate(2, 3), DropId: 0));
+
+            File.WriteAllText("monsters.json", JArray.FromObject(Monsters.ToBase()).ToString());*/
 
             Console.WriteLine("Starting server...");
             TcpListener server = new TcpListener(IPAddress.Parse(ipAdress), port);
